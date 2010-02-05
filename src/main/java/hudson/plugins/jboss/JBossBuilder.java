@@ -46,6 +46,12 @@ public class JBossBuilder extends Builder {
     private final DescriptorImpl.Operation operation;
 
     private final String properties;
+
+    /**
+     * Currently hard-coded localhost address.
+     * In future it can be more flexible.
+     */
+    private final String hostName = "127.0.0.1";
     
     @DataBoundConstructor
     public JBossBuilder(DescriptorImpl.Operation operation, String serverName, String properties) {
@@ -87,31 +93,39 @@ public class JBossBuilder extends Builder {
     	ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader(); 
     	Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
     	try {
+    		
 	    	switch (operation) {
+	    	
 	    		case START_AND_WAIT:
-	    			if (checkStatus(listener, 3, true)) {
+	    			if (JMXUtils.checkStatus(hostName, server.getJndiPort(), listener, 3, true)) {
 	    				listener.getLogger().println("JBoss AS already started.");
 	    				return true;
 	    			}
-	    			boolean ret = start(build, launcher, listener) && checkStatus(listener, 15, false);
+	    			boolean ret = CommandsUtils.start(server,
+						this.properties, build, launcher, listener)
+						&& JMXUtils.checkStatus(hostName, server.getJndiPort(),
+								listener, 15, false);
 	    			if (ret) {
 	        			listener.getLogger().println("JBoss AS started!");
 	    			} else {
 	        			listener.getLogger().println("JBoss AS is not stared before timeout has expired!");
 	    			}
 	    			return ret;
+	    			
 	    		case START:
-	    			if (checkStatus(listener, 3, true)) {
-	    				listener.getLogger().println("JBoss AS already started.");
-	    				return true;
-	    			}
-	    			return start(build, launcher, listener);
+					if (JMXUtils.checkStatus(hostName, server.getJndiPort(), listener, 3, true)) {
+		    				listener.getLogger().println("JBoss AS already started.");
+		    				return true;
+		    		}
+	    			return CommandsUtils.start(server, this.properties, build, launcher, listener);
+
 	    		case SHUTDOWN:
-	    			if (!checkStatus(listener, 3, true)) {
+	    			if (!JMXUtils.checkStatus(hostName, server.getJndiPort(), listener, 3, true)) {
 	    				listener.getLogger().println("JBoss AS is not working.");
 	    				return true;
 	    			}
-	    			return stop(launcher, listener);
+	    			return CommandsUtils.stop(server, launcher, listener);
+
 	    		default:
 	    			listener.fatalError("Uexpected type of operation.");
 	    			return false;
@@ -121,192 +135,9 @@ public class JBossBuilder extends Builder {
     	}
     }
 
-    /**
-     * Stops given server.
-     * 
-     * @param launcher
-     * @param listener
-     * @return
-     */
-    private boolean stop(Launcher launcher, BuildListener listener) {
-        ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add(launcher.isUnix() ? "shutdown.sh" : "shutdown.bat");
-        
-        String jndiUrl = "jnp://127.0.0.1:" + server.getJndiPort(); //jnp://127.0.0.1:1099
-        
-        args.add("-s", jndiUrl, "-S");
-        if(!launcher.isUnix()) {
-            args = new ArgumentListBuilder().add("cmd.exe","/C").addQuoted(args.toStringWithQuote());
-        }
-        
-        try {
-        	launcher.launch()
-        				.stderr(listener.getLogger())
-        				.stdout(new NullOutputStream())
-        				.cmds(args)
-        				.pwd(getDescriptor()
-        				.getHomeDir() + "/bin")
-        				.start();
-            return true;
-        } catch (Exception e) {
-        	if (e instanceof IOException) {
-        		Util.displayIOException((IOException)e,listener);
-        	}
-            e.printStackTrace( listener.fatalError("Error during execution.") );
-            return false;
-		}
-    }
 
-    /**
-     * Starts given server. Not waits.
-     * 
-     * @param launcher
-     * @param listener
-     * @return
-     */
-	private boolean start(AbstractBuild build, Launcher launcher,
-			BuildListener listener) throws IOException, InterruptedException {
-		
-        ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add(launcher.isUnix() ? "run.sh" : "run.bat");
-        args.add("-c", server.getServerName());
-        if(!launcher.isUnix()) {
-            args = new ArgumentListBuilder().add("cmd.exe","/C").addQuoted(args.toStringWithQuote());
-        }
 
-    	EnvVars env = build.getEnvironment(listener);
-        VariableResolver<String> vr = build.getBuildVariableResolver();
-        String properties = env.expand(this.properties);
-        args.addKeyValuePairsFromPropertyString("-D",properties,vr);
 
-        try {
-        	launcher.launch()
-        				.stderr(listener.getLogger())
-        				.stdout(new NullOutputStream())
-        				.cmds(args)
-        				.pwd(getDescriptor()
-        				.getHomeDir() + "/bin")
-        				.start();
-            return true;
-        } catch (Exception e) {
-        	if (e instanceof IOException) {
-        		Util.displayIOException((IOException)e,listener);
-        	}
-            e.printStackTrace( listener.fatalError("Error during execution.") );
-            return false;
-		}
-    }
-
-    /**
-     * Tries to connect to naming service and checks status of the server.
-     * If server is not started waits 'timeout'
-     * seconds for start checking every second.
-     * 
-     * @param listener
-     */
-	private boolean checkStatus(final BuildListener listener,
-			final int timeout, boolean ignoreErrors) {
-
-		boolean started = false;
-		try {
-			InitialContext ctx = getInitialContext();
-	
-			MBeanServerConnection server = getMBeanServer(ctx, listener, timeout);
-			
-			// Wait until server startup is complete
-			long startTime = System.currentTimeMillis();
-			while (!started
-					&& (System.currentTimeMillis() - startTime < timeout * 1000)) {
-				try {
-					Thread.sleep(1000);
-					started = isStarted(server);
-				} catch (Exception e) {
-					throw new RuntimeException("Unable to wait: " + e.getMessage(),
-						e);
-				}
-			}
-		} catch (RuntimeException e) {
-			if (!ignoreErrors) {
-				throw e;
-			}
-		}
-		return started;
-    }
-
-    /**
-     * Trying to connect to naming service.
-     * 
-     * @param ctx, {@link InitialContext} used to lookup.
-     * @param listener, used only for logging purpose
-     * @return, server connection or exception will thrown if failed
-     */
-    private MBeanServerConnection getMBeanServer(
-    		final InitialContext ctx, final BuildListener listener, int timeout) {
-    	
-		MBeanServerConnection server = null;
-		NamingException ne = null;
-		int retryWait = 1000;
-		for (int i = 0; i < timeout; ++i) {
-			try {
-				Thread.sleep(retryWait);
-				server = (MBeanServerConnection) ctx
-						.lookup("jmx/invoker/RMIAdaptor");
-				break;
-			} catch (NamingException e) {
-				ne = e;
-			} catch (InterruptedException e) {
-				listener.getLogger().println(
-						"Thread interrupted while waiting for MBean connection: "
-								+ e.getMessage());
-				e.printStackTrace();
-				break;
-			}
-		}
-
-         if ( server == null ) {
-             throw new RuntimeException( "Unable to get JBoss JMX MBean connection in 60 seconds: " + ne.getMessage(), ne );
-         }
-         
-         return server;
-    }
-    
-    /**
-     * Checks if Server is up for given MBean.
-     * 
-     * @param server, given {@link MBeanServerConnection}
-     * @return true if server is up, false otherwise
-     * @throws Exception, a few types of exception can be thrown.
-     */
-	private boolean isStarted(MBeanServerConnection server) throws Exception {
-		ObjectName serverMBeanName = new ObjectName("jboss.system:type=Server");
-		return ((Boolean) server.getAttribute(serverMBeanName, "Started"))
-				.booleanValue();
-	}
-
-	/**
-	 * Gets {@link InitialContet} for current server.
-	 * 
-	 * @return Obtained InitialContext, or RuntimeException will thrown.
-	 */
-	private InitialContext getInitialContext() {
-		// currently hard-coded localhost, in future it can be more flexible
-		String hostName = "127.0.0.1";
-		
-		Properties env = new Properties();
-		try {
-			env.put("java.naming.factory.initial",
-					"org.jnp.interfaces.NamingContextFactory");
-			env.put("java.naming.factory.url.pkgs",
-					"org.jboss.naming:org.jnp.interfaces");
-			env.put("java.naming.provider.url", hostName + ":" + server.getJndiPort());
-			return new InitialContext(env);
-		} catch (NamingException e) {
-			throw new RuntimeException(
-					"Unable to instantiate naming context: " + e.getMessage(),
-					e);
-		}
-	}
-    
     @Override
     public DescriptorImpl getDescriptor() {
         return (DescriptorImpl)super.getDescriptor();
@@ -424,6 +255,7 @@ public class JBossBuilder extends Builder {
             JSONObject optServersObject = parameters.optJSONObject("servers");
             if (optServersObject != null) {
             	servers.add(new ServerBean(
+            							homeDir,
             							optServersObject.getString("serverName"),
             							optServersObject.getInt("jndiPort")));
             } else {
@@ -432,6 +264,7 @@ public class JBossBuilder extends Builder {
             		for (int i=0; i < optServersArray.size(); i++) {
             			JSONObject serverObject = (JSONObject) optServersArray.get(i);
                     	servers.add(new ServerBean(
+                    			homeDir,
     							serverObject.getString("serverName"),
     							serverObject.getInt("jndiPort")));
             		}
@@ -466,14 +299,21 @@ public class JBossBuilder extends Builder {
 }
     
     public static class ServerBean {
+    	private final String homeDir;
     	private final String serverName;
     	private final int jndiPort;
     	
-    	public ServerBean(final String serverName, final int jndiPort) {
+		public ServerBean(final String homeDir,
+				final String serverName, final int jndiPort) {
+    		this.homeDir = homeDir;
     		this.serverName = serverName;
     		this.jndiPort =jndiPort;
     	}
     	
+		public String getHomeDir() {
+			return this.homeDir;
+		}
+		
     	public String getServerName() {
     		return this.serverName;
     	}
