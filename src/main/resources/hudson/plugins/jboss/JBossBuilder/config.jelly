@@ -1,0 +1,31 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+  <j:if test="${empty(descriptor.servers)}">
+	  <f:entry title="">
+  			<div class="error">This plugin need to be configured in Manage Hudson -> Configure System.</div>
+  		</f:entry>
+  </j:if>
+
+  <j:if test="${!empty(descriptor.servers)}">
+	  <f:entry title="Operation">
+	      <select class="setting-input" name="jBossBuilder.operation">
+	        <j:forEach var="it" items="${descriptor.operations}">
+	          <f:option selected="${it==instance.operation}" value="${it.name()}">${it.name()}</f:option>
+	        </j:forEach>
+	      </select>
+	  </f:entry>
+
+	  <f:entry title="Server">
+		<select class="setting-input" name="jBossBuilder.serverName">
+	        <j:forEach var="serv" items="${descriptor.servers}">
+	          <f:option selected="${serv.serverName==instance.server.serverName}" value="${serv.serverName}">${serv.serverName}</f:option>
+	        </j:forEach>
+		</select>
+	  </f:entry>
+	  <f:advanced>
+	    <f:entry title="Properties">
+	      <f:textarea field="properties" value="${instance.properties}"/>
+	    </f:entry>
+	  </f:advanced>
+  </j:if>
+</j:jelly>
