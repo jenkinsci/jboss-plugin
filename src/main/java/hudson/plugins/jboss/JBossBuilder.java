@@ -34,6 +34,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
+import antlr.StringUtils;
+
 /**
  * This plugin is for simple management of JBoss instances.
  *
@@ -97,13 +99,13 @@ public class JBossBuilder extends Builder {
 	    	switch (operation) {
 	    	
 	    		case START_AND_WAIT:
-	    			if (JMXUtils.checkStatus(hostName, server.getJndiPort(), listener, 3, true)) {
+	    			if (JMXUtils.checkServerStatus(hostName, server.getJndiPort(), listener, 3, true)) {
 	    				listener.getLogger().println("JBoss AS already started.");
 	    				return true;
 	    			}
 	    			boolean ret = CommandsUtils.start(server,
 						this.properties, build, launcher, listener)
-						&& JMXUtils.checkStatus(hostName, server.getJndiPort(),
+						&& JMXUtils.checkServerStatus(hostName, server.getJndiPort(),
 								listener, 15, false);
 	    			if (ret) {
 	        			listener.getLogger().println("JBoss AS started!");
@@ -113,19 +115,30 @@ public class JBossBuilder extends Builder {
 	    			return ret;
 	    			
 	    		case START:
-					if (JMXUtils.checkStatus(hostName, server.getJndiPort(), listener, 3, true)) {
+					if (JMXUtils.checkServerStatus(hostName, server.getJndiPort(), listener, 3, true)) {
 		    				listener.getLogger().println("JBoss AS already started.");
 		    				return true;
 		    		}
 	    			return CommandsUtils.start(server, this.properties, build, launcher, listener);
 
 	    		case SHUTDOWN:
-	    			if (!JMXUtils.checkStatus(hostName, server.getJndiPort(), listener, 3, true)) {
+	    			if (!JMXUtils.checkServerStatus(hostName, server.getJndiPort(), listener, 3, true)) {
 	    				listener.getLogger().println("JBoss AS is not working.");
 	    				return true;
 	    			}
 	    			return CommandsUtils.stop(server, launcher, listener);
 
+	    		case CHECK_DEPLOY:
+	    			JMXUtils.checkServerStatus(hostName, server.getJndiPort(), listener, 15, false);
+	    			boolean result = false;
+	    			if (Util.fixEmpty(this.properties) != null) {
+	    				String[] modules = Util.tokenize(this.properties);
+	    				result = JMXUtils.checkDeploy(hostName, server.getJndiPort(), listener, 3, modules);
+	    			} else {
+	    				listener.getLogger().println("Mo modules provided.");
+	    				result = true;
+	    			}
+	    			return result;
 	    		default:
 	    			listener.fatalError("Uexpected type of operation.");
 	    			return false;
@@ -291,10 +304,11 @@ public class JBossBuilder extends Builder {
         	
             START_AND_WAIT,
             START,
-            SHUTDOWN;
+            SHUTDOWN,
+            CHECK_DEPLOY;
             
             private static Operation[] all =
-            	new Operation[]{START_AND_WAIT, START, SHUTDOWN}; 
+            	new Operation[]{START_AND_WAIT, START, SHUTDOWN, CHECK_DEPLOY}; 
         }
 }
     

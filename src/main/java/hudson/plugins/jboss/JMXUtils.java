@@ -9,6 +9,8 @@ import javax.management.ObjectName;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
+import org.jboss.system.ServiceMBean;
+
 /**
  * This utility class contains static methods to help dealing with JBoss Managed Beans. 
  * 
@@ -110,16 +112,16 @@ public class JMXUtils {
      * @param timeout, how long will we wait for server start
      * @param ignoreErrors, if true any connection problems will be ignored, flase otherwise
      */
-	public static boolean checkStatus(
+	public static boolean checkServerStatus(
 			final String hostName, final int jndiPort,
 			final BuildListener listener,
 			final int timeout, boolean ignoreErrors) {
 
 		boolean started = false;
 		try {
-			InitialContext ctx = JMXUtils.getInitialContext(hostName, jndiPort);
+			InitialContext ctx = getInitialContext(hostName, jndiPort);
 	
-			MBeanServerConnection server = JMXUtils.getMBeanServer(ctx, listener, timeout);
+			MBeanServerConnection server = getMBeanServer(ctx, listener, timeout);
 			
 			// Wait until server startup is complete
 			long startTime = System.currentTimeMillis();
@@ -127,7 +129,7 @@ public class JMXUtils {
 					&& (System.currentTimeMillis() - startTime < timeout * 1000)) {
 				try {
 					Thread.sleep(1000);
-					started = JMXUtils.isServerStarted(server);
+					started = isServerStarted(server);
 				} catch (Exception e) {
 					throw new RuntimeException("Unable to wait: " + e.getMessage(),
 						e);
@@ -141,4 +143,79 @@ public class JMXUtils {
 		return started;
     }
 
+	/**
+	 * Checks if given modules have been correctly deployed.
+     * @param hostName, name of the server connect to
+     * @param jndiPort, port number of naming service
+     * @param listener, {@BuildListener} for logging purpose
+     * @param timeout, how long will we wait for server start
+	 * @return true if gone fine, false if any module have deployment problem
+	 */
+	public static boolean checkDeploy(final String hostName,
+			final int jndiPort, final BuildListener listener,
+			final int timeout, final String[] modules) {
+		
+		listener.getLogger().println("Verification of deplyed modules started");
+				
+		InitialContext ctx = getInitialContext(hostName, jndiPort);
+
+		MBeanServerConnection server = getMBeanServer(ctx, listener, timeout);
+	
+		boolean deployed = true;
+		try {
+			for (String moduleName : modules) {
+				if (moduleName.endsWith(".ear")) {
+					boolean ok = checkEARDeploymentState(server, moduleName);
+					listener.getLogger().println(
+							String.format("Verifying deployment of the EAR '%s' ... %s",
+									moduleName, ok?"SUCCESS":"FAILED"));
+					deployed &= ok;
+				} else if (moduleName.endsWith("-ejb.jar")) {
+					boolean ok = checkEJBDeploymentState(server, moduleName);
+					listener.getLogger().println(
+							String.format("Verifying deployment of the EJB '%s' ... %s",
+									moduleName, ok?"SUCCESS":"FAILED"));
+					deployed &= ok;
+				} else {
+					listener.error(
+							String.format("Unknown type of the module '%s'. Cannot verify deployment.", moduleName));
+					deployed = false;
+				}
+			}
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+
+		listener.getLogger().println("Verification finished.");
+
+		return deployed;
+	}
+
+	/**
+	 * Checks if single EAR is deployed with no problems.
+	 * To check other states take a look on {@link ServiceMBean}.
+	 * 
+     * @param server, given {@link MBeanServerConnection}
+     * @param earName, the name of the EAR to be checked
+	 * @return true if started, false otherwise 
+	 */
+	public static boolean checkEARDeploymentState(MBeanServerConnection server, String earName) throws Exception {
+		ObjectName serverMBeanName = new ObjectName(
+				String.format("jboss.j2ee:service=EARDeployment,url='%s'", earName));
+		return ServiceMBean.STARTED == (Integer) server.getAttribute(serverMBeanName, "State");
+	}
+	
+	/**
+	 * Checks if single EJB module is deployed with no problems.
+	 * To check other states take a look on {@link ServiceMBean}.
+	 * 
+     * @param server, given {@link MBeanServerConnection}
+     * @param ejbName, the name of the EJB module to be checked
+	 * @return true if started, false otherwise 
+	 */
+	public static boolean checkEJBDeploymentState(MBeanServerConnection server, String ejbName) throws Exception {
+		ObjectName serverMBeanName = new ObjectName(
+				String.format("jboss.j2ee:service=EjbModule,module=%s", ejbName));
+		return ServiceMBean.STARTED == (Integer) server.getAttribute(serverMBeanName, "State");
+	}
 }
