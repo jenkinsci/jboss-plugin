@@ -14,7 +14,7 @@ import org.jboss.system.ServiceMBean;
 /**
  * This utility class contains static methods to help dealing with JBoss Managed Beans. 
  * 
- * @author juliuszb
+ * @author Juliusz Brzostek
  *
  */
 public class JMXUtils {

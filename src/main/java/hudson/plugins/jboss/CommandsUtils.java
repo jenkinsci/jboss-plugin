@@ -16,7 +16,7 @@ import org.apache.commons.io.output.NullOutputStream;
 /**
  * Utility class for dealing with jboss command on OS system level.
  * 
- * @author juliuszb
+ * @author Juliusz Brzostek
  *
  */
 public class CommandsUtils {
@@ -35,6 +35,7 @@ public class CommandsUtils {
      * @param listener, {@BuildListener} for logging purpose
      * @return true if everything gone fine, false if any error occurred 
      */
+	@SuppressWarnings("unchecked")
 	public static boolean start(ServerBean server, String extraProperties,
 			AbstractBuild build, Launcher launcher,
 			BuildListener listener) throws IOException, InterruptedException {
