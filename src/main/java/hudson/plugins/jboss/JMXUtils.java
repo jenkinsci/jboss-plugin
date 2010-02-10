@@ -29,8 +29,8 @@ public class JMXUtils {
 	/**
 	 * Gets {@link InitialContet} from given server and port.
 	 * 
-	 * @param hostName, Name of the server connect to
-	 * @param jndiPort, Port number of naming service
+	 * @param hostName Name of the server connect to
+	 * @param jndiPort Port number of naming service
 	 * @return Obtained InitialContext, or RuntimeException will thrown.
 	 */
 	public static InitialContext getInitialContext(final String hostName, final int jndiPort) {
@@ -52,10 +52,10 @@ public class JMXUtils {
     /**
      * Gets Managed Beans server for given naming context.
      * 
-     * @param ctx, {@link InitialContext} used to lookup.
-     * @param listener, used only for logging purpose
-     * @param timeout, timeout of connection in seconds
-     * @return, server connection or exception will thrown if failed
+     * @param ctx {@link InitialContext} used to lookup.
+     * @param listener used only for logging purpose
+     * @param timeout timeout of connection in seconds
+     * @return server connection or exception will thrown if failed
      */
     public static MBeanServerConnection getMBeanServer(
     		final InitialContext ctx, final BuildListener listener, final int timeout) {
@@ -91,9 +91,9 @@ public class JMXUtils {
     /**
      * Checks if Server is up using given MBean server connection.
      * 
-     * @param server, given {@link MBeanServerConnection}
+     * @param server given {@link MBeanServerConnection}
      * @return true if server is up, false otherwise
-     * @throws Exception, a few types of exception can be thrown.
+     * @throws Exception A few types of exception can be thrown.
      */
 	public static boolean isServerStarted(MBeanServerConnection server) throws Exception {
 		ObjectName serverMBeanName = new ObjectName("jboss.system:type=Server");
@@ -106,11 +106,11 @@ public class JMXUtils {
      * 
      * If server is not started checks status every second for 'timeout'. 
      * 
-     * @param hostName, name of the server connect to
-     * @param jndiPort, port number of naming service
-     * @param listener, {@BuildListener} for logging purpose
-     * @param timeout, how long will we wait for server start
-     * @param ignoreErrors, if true any connection problems will be ignored, flase otherwise
+     * @param hostName name of the server connect to
+     * @param jndiPort port number of naming service
+     * @param listener {@BuildListener} for logging purpose
+     * @param timeout how long will we wait for server start
+     * @param ignoreErrors if true any connection problems will be ignored, flase otherwise
      */
 	public static boolean checkServerStatus(
 			final String hostName, final int jndiPort,

@@ -5,7 +5,7 @@ import hudson.Util;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
- * This is composit configuration bean for all types of operations.
+ * This is composite configuration bean for all types of operations.
  * 
  * @author Juliusz Brzostek
  */
@@ -18,9 +18,9 @@ public class Operation {
 	/**
 	 * Default constructor.
 	 * 
-	 * @param value, type of the operation
-	 * @param properties, extra text properties
-	 * @param stopOnFailure, flag used by CHECK_DEPLOY operation
+	 * @param value type of the operation
+	 * @param properties extra text properties
+	 * @param stopOnFailure flag used by CHECK_DEPLOY operation
 	 */
 	@DataBoundConstructor
 	public Operation(OperationEnum value, String properties, Boolean stopOnFailure) {
