@@ -14,7 +14,7 @@
 	<version>1.0.1-SNAPSHOT</version>
 	<packaging>hpi</packaging>
 	
-	<url>http://wiki.hudson-ci.org/display/HUDSON/JBoss+Plugin</url>
+	<url>http://wiki.hudson-ci.org/display/HUDSON/JBoss+Management+Plugin</url>
 
 	<developers>
 		<developer>
