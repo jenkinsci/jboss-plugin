@@ -7,6 +7,33 @@
   </j:if>
 
   <j:if test="${!empty(descriptor.servers)}">
+	  <f:entry title="Server">
+		<select class="setting-input" name="jBossBuilder.serverName">
+	        <j:forEach var="serv" items="${descriptor.servers}">
+	          <f:option selected="${serv.serverName==instance.server.serverName}" value="${serv.serverName}">${serv.serverName}</f:option>
+	        </j:forEach>
+		</select>
+	  </f:entry>
+
+	  <f:entry title="Operation">
+	    <j:forEach var="it" items="${descriptor.operations}">
+	      <f:radioBlock name="jBossBuilder.operation"
+	      				value="${it.name()}"
+	      				title="${it.name()}"
+	      				checked="${it==instance.operation.type}">
+	      				
+	      	<!--input type="radio"
+	      		   name="jBossBuilder.operation"
+	      		   value="${it}"
+	      		   checked="${instance.operation.name()==it?'true':null}" />
+	      	<st:nbsp/> <label for="jBossBuilder.operation">${it}</label-->
+	      	
+	       <st:include from="${it}" page="${it}-config.jelly"/>
+	      </f:radioBlock>
+	    </j:forEach>
+	  </f:entry>
+  
+  <!--
 	  <f:entry title="Operation">
 	      <select class="setting-input" name="jBossBuilder.operation">
 	        <j:forEach var="it" items="${descriptor.operations}">
@@ -27,5 +54,6 @@
 	      <f:textarea field="properties" value="${instance.properties}"/>
 	    </f:entry>
 	  </f:advanced>
+   -->
   </j:if>
 </j:jelly>

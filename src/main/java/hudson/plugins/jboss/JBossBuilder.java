@@ -31,11 +31,8 @@ import org.kohsuke.stapler.StaplerRequest;
 public class JBossBuilder extends Builder {
 
     private final ServerBean server;
-
-    private final DescriptorImpl.Operation operation;
-
-    private final String properties;
-
+    private final Operation operation;
+    
     /**
      * Currently hard-coded localhost address.
      * In future it can be more flexible.
@@ -43,9 +40,8 @@ public class JBossBuilder extends Builder {
     private final String hostName = "127.0.0.1";
     
     @DataBoundConstructor
-    public JBossBuilder(DescriptorImpl.Operation operation, String serverName, String properties) {
+    public JBossBuilder(Operation operation, String serverName) {
     	this.operation = operation;
-    	this.properties = Util.fixEmptyAndTrim(properties);;
     	
     	ServerBean localServerBean = null;
     	
@@ -63,16 +59,13 @@ public class JBossBuilder extends Builder {
         return this.server;
     }
 
-    public DescriptorImpl.Operation getOperation() {
+    public Operation getOperation() {
     	return this.operation;
     }
     
-    public String getProperties() {
-    	return this.properties;
-    }
-    
-    @Override
-    public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException{
+	@Override
+	public boolean perform(AbstractBuild build, Launcher launcher,
+			BuildListener listener) throws IOException, InterruptedException {    	
     	
     	if (server == null || operation == null) {
     		listener.fatalError("Wrong configuration of plugin. Step error.");
@@ -83,7 +76,7 @@ public class JBossBuilder extends Builder {
     	Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
     	try {
     		
-	    	switch (operation) {
+	    	switch (operation.getType()) {
 	    	
 	    		case START_AND_WAIT:
 	    			if (JMXUtils.checkServerStatus(hostName, server.getJndiPort(), listener, 3, true)) {
@@ -91,7 +84,7 @@ public class JBossBuilder extends Builder {
 	    				return true;
 	    			}
 	    			boolean ret = CommandsUtils.start(server,
-						this.properties, build, launcher, listener)
+						operation.getProperties(), build, launcher, listener)
 						&& JMXUtils.checkServerStatus(hostName, server.getJndiPort(),
 								listener, 15, false);
 	    			if (ret) {
@@ -106,7 +99,7 @@ public class JBossBuilder extends Builder {
 		    				listener.getLogger().println("JBoss AS already started.");
 		    				return true;
 		    		}
-	    			return CommandsUtils.start(server, this.properties, build, launcher, listener);
+	    			return CommandsUtils.start(server, operation.getProperties(), build, launcher, listener);
 
 	    		case SHUTDOWN:
 	    			if (!JMXUtils.checkServerStatus(hostName, server.getJndiPort(), listener, 3, true)) {
@@ -116,14 +109,18 @@ public class JBossBuilder extends Builder {
 	    			return CommandsUtils.stop(server, launcher, listener);
 
 	    		case CHECK_DEPLOY:
-	    			JMXUtils.checkServerStatus(hostName, server.getJndiPort(), listener, 15, false);
+	    			JMXUtils.checkServerStatus(hostName, server.getJndiPort(), listener, 3, false);
 	    			boolean result = false;
-	    			if (Util.fixEmpty(this.properties) != null) {
-	    				String[] modules = Util.tokenize(this.properties);
+	    			if (Util.fixEmpty(operation.getProperties()) != null) {
+	    				String[] modules = Util.tokenize(operation.getProperties());
 	    				result = JMXUtils.checkDeploy(hostName, server.getJndiPort(), listener, 3, modules);
 	    			} else {
 	    				listener.getLogger().println("Mo modules provided.");
 	    				result = true;
+	    			}
+	    			if (!result && operation.isStopOnFailure()) {
+	    				listener.getLogger().println("StopOnFailure flag is set, going to down server...");
+	    				CommandsUtils.stop(server, launcher, listener);
 	    			}
 	    			return result;
 	    		default:
@@ -134,9 +131,6 @@ public class JBossBuilder extends Builder {
         	Thread.currentThread().setContextClassLoader(contextClassLoader);
     	}
     }
-
-
-
 
     @Override
     public DescriptorImpl getDescriptor() {
@@ -283,21 +277,10 @@ public class JBossBuilder extends Builder {
         	return this.servers;
         }
 
-        public Operation[] getOperations() {
-        	return Operation.all;
+        public OperationEnum[] getOperations() {
+        	return OperationEnum.all;
         }
-
-        enum Operation {
-        	
-            START_AND_WAIT,
-            START,
-            SHUTDOWN,
-            CHECK_DEPLOY;
-            
-            private static Operation[] all =
-            	new Operation[]{START_AND_WAIT, START, SHUTDOWN, CHECK_DEPLOY}; 
-        }
-}
+    }
     
     public static class ServerBean {
     	private final String homeDir;

@@ -162,28 +162,24 @@ public class JMXUtils {
 		MBeanServerConnection server = getMBeanServer(ctx, listener, timeout);
 	
 		boolean deployed = true;
-		try {
-			for (String moduleName : modules) {
-				if (moduleName.endsWith(".ear")) {
-					boolean ok = checkEARDeploymentState(server, moduleName);
-					listener.getLogger().println(
-							String.format("Verifying deployment of the EAR '%s' ... %s",
-									moduleName, ok?"SUCCESS":"FAILED"));
-					deployed &= ok;
-				} else if (moduleName.endsWith("-ejb.jar")) {
-					boolean ok = checkEJBDeploymentState(server, moduleName);
-					listener.getLogger().println(
-							String.format("Verifying deployment of the EJB '%s' ... %s",
-									moduleName, ok?"SUCCESS":"FAILED"));
-					deployed &= ok;
-				} else {
-					listener.error(
-							String.format("Unknown type of the module '%s'. Cannot verify deployment.", moduleName));
-					deployed = false;
-				}
+		for (String moduleName : modules) {
+			if (moduleName.endsWith(".ear")) {
+				boolean ok = checkEARDeploymentState(listener, server, moduleName);
+				listener.getLogger().println(
+						String.format("Verifying deployment of the EAR '%s' ... %s",
+								moduleName, ok?"SUCCESS":"FAILED"));
+				deployed &= ok;
+			} else if (moduleName.endsWith("-ejb.jar")) {
+				boolean ok = checkEJBDeploymentState(listener, server, moduleName);
+				listener.getLogger().println(
+						String.format("Verifying deployment of the EJB '%s' ... %s",
+								moduleName, ok?"SUCCESS":"FAILED"));
+				deployed &= ok;
+			} else {
+				listener.error(
+						String.format("Unknown type of the module '%s'. Cannot verify deployment.", moduleName));
+				deployed = false;
 			}
-		} catch (Exception e) {
-			throw new RuntimeException(e);
 		}
 
 		listener.getLogger().println("Verification finished.");
@@ -195,27 +191,45 @@ public class JMXUtils {
 	 * Checks if single EAR is deployed with no problems.
 	 * To check other states take a look on {@link ServiceMBean}.
 	 * 
+	 * @param listener, for logging purpose
      * @param server, given {@link MBeanServerConnection}
      * @param earName, the name of the EAR to be checked
 	 * @return true if started, false otherwise 
 	 */
-	public static boolean checkEARDeploymentState(MBeanServerConnection server, String earName) throws Exception {
-		ObjectName serverMBeanName = new ObjectName(
-				String.format("jboss.j2ee:service=EARDeployment,url='%s'", earName));
-		return ServiceMBean.STARTED == (Integer) server.getAttribute(serverMBeanName, "State");
+	public static boolean checkEARDeploymentState(
+			final BuildListener listener,
+			MBeanServerConnection server, String earName) {
+		try {
+			ObjectName serverMBeanName = new ObjectName(
+					String.format("jboss.j2ee:service=EARDeployment,url='%s'", earName));
+			return ServiceMBean.STARTED == (Integer) server.getAttribute(serverMBeanName, "State");
+		} catch (Exception e) {
+			e.printStackTrace();
+			listener.fatalError(e.getMessage());
+			return false;
+		}
 	}
 	
 	/**
 	 * Checks if single EJB module is deployed with no problems.
 	 * To check other states take a look on {@link ServiceMBean}.
 	 * 
+	 * @param listener, for logging purpose
      * @param server, given {@link MBeanServerConnection}
      * @param ejbName, the name of the EJB module to be checked
 	 * @return true if started, false otherwise 
 	 */
-	public static boolean checkEJBDeploymentState(MBeanServerConnection server, String ejbName) throws Exception {
-		ObjectName serverMBeanName = new ObjectName(
-				String.format("jboss.j2ee:service=EjbModule,module=%s", ejbName));
-		return ServiceMBean.STARTED == (Integer) server.getAttribute(serverMBeanName, "State");
+	public static boolean checkEJBDeploymentState(
+			final BuildListener listener,
+			MBeanServerConnection server, String ejbName) {
+		try {
+			ObjectName serverMBeanName = new ObjectName(
+					String.format("jboss.j2ee:service=EjbModule,module=%s", ejbName));
+			return ServiceMBean.STARTED == (Integer) server.getAttribute(serverMBeanName, "State");
+		} catch (Exception e) {
+			e.printStackTrace();
+			listener.fatalError(e.getMessage());
+			return false;
+		}
 	}
 }
