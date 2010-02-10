@@ -29,10 +29,10 @@ public class CommandsUtils {
      * Starts given server.
      * Method is not waiting.
      * 
-     * @param server, server to start
-     * @param extraProperties, extra properties for run command
-     * @param launcher, system command luncher
-     * @param listener, {@BuildListener} for logging purpose
+     * @param server server to start
+     * @param extraProperties extra properties for run command
+     * @param launcher system command luncher
+     * @param listener {@link BuildListener} for logging purpose
      * @return true if everything gone fine, false if any error occurred 
      */
 	@SuppressWarnings("unchecked")
@@ -72,9 +72,9 @@ public class CommandsUtils {
     /**
      * Stops given server.
      * 
-     * @param server, {@ServerBean} to be stopped
-     * @param launcher, system command luncher
-     * @param listener, {@BuildListener} for logging purpose
+     * @param server {@link ServerBean} to be stopped
+     * @param launcher system command luncher
+     * @param listener {@link BuildListener} for logging purpose
      * @return true if everything gone fine, false if any error occurred 
      */
     public static boolean stop(ServerBean server, Launcher launcher, BuildListener listener) {

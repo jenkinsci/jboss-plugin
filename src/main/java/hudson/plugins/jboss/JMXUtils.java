@@ -27,10 +27,11 @@ public class JMXUtils {
 	}
 
 	/**
-	 * Gets {@link InitialContet} from given server and port.
+	 * Gets {@link InitialContext} from given server and port.
 	 * 
 	 * @param hostName Name of the server connect to
 	 * @param jndiPort Port number of naming service
+	 * 
 	 * @return Obtained InitialContext, or RuntimeException will thrown.
 	 */
 	public static InitialContext getInitialContext(final String hostName, final int jndiPort) {
@@ -55,6 +56,7 @@ public class JMXUtils {
      * @param ctx {@link InitialContext} used to lookup.
      * @param listener used only for logging purpose
      * @param timeout timeout of connection in seconds
+     * 
      * @return server connection or exception will thrown if failed
      */
     public static MBeanServerConnection getMBeanServer(
@@ -92,7 +94,9 @@ public class JMXUtils {
      * Checks if Server is up using given MBean server connection.
      * 
      * @param server given {@link MBeanServerConnection}
+     * 
      * @return true if server is up, false otherwise
+     * 
      * @throws Exception A few types of exception can be thrown.
      */
 	public static boolean isServerStarted(MBeanServerConnection server) throws Exception {
@@ -108,9 +112,11 @@ public class JMXUtils {
      * 
      * @param hostName name of the server connect to
      * @param jndiPort port number of naming service
-     * @param listener {@BuildListener} for logging purpose
+     * @param listener {@link BuildListener} for logging purpose
      * @param timeout how long will we wait for server start
-     * @param ignoreErrors if true any connection problems will be ignored, flase otherwise
+     * @param ignoreErrors if true any connection problems will be ignored
+     * 
+     * @return true if server is up, false otherwise
      */
 	public static boolean checkServerStatus(
 			final String hostName, final int jndiPort,
@@ -145,10 +151,12 @@ public class JMXUtils {
 
 	/**
 	 * Checks if given modules have been correctly deployed.
-     * @param hostName, name of the server connect to
-     * @param jndiPort, port number of naming service
-     * @param listener, {@BuildListener} for logging purpose
-     * @param timeout, how long will we wait for server start
+	 * 
+     * @param hostName name of the server connect to
+     * @param jndiPort port number of naming service
+     * @param listener {@link BuildListener} for logging purpose
+     * @param timeout how long will we wait for server start
+     * 
 	 * @return true if gone fine, false if any module have deployment problem
 	 */
 	public static boolean checkDeploy(final String hostName,
@@ -191,9 +199,10 @@ public class JMXUtils {
 	 * Checks if single EAR is deployed with no problems.
 	 * To check other states take a look on {@link ServiceMBean}.
 	 * 
-	 * @param listener, for logging purpose
-     * @param server, given {@link MBeanServerConnection}
-     * @param earName, the name of the EAR to be checked
+	 * @param listener for logging purpose
+     * @param server given {@link MBeanServerConnection}
+     * @param earName the name of the EAR to be checked
+     * 
 	 * @return true if started, false otherwise 
 	 */
 	public static boolean checkEARDeploymentState(
@@ -214,9 +223,10 @@ public class JMXUtils {
 	 * Checks if single EJB module is deployed with no problems.
 	 * To check other states take a look on {@link ServiceMBean}.
 	 * 
-	 * @param listener, for logging purpose
-     * @param server, given {@link MBeanServerConnection}
-     * @param ejbName, the name of the EJB module to be checked
+	 * @param listener for logging purpose
+     * @param server given {@link MBeanServerConnection}
+     * @param ejbName the name of the EJB module to be checked
+     * 
 	 * @return true if started, false otherwise 
 	 */
 	public static boolean checkEJBDeploymentState(
