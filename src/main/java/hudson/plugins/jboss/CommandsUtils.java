@@ -94,7 +94,7 @@ public class CommandsUtils {
         				.stdout(new NullOutputStream())
         				.cmds(args)
         				.pwd(server.getHomeDir() + "/bin")
-        				.start();
+        				.join();
             return true;
         } catch (Exception e) {
         	if (e instanceof IOException) {
