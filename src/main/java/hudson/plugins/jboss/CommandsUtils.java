@@ -40,8 +40,11 @@ public class CommandsUtils {
 			AbstractBuild build, Launcher launcher,
 			BuildListener listener) throws IOException, InterruptedException {
 		
+		String startCommand = server.getHomeDir() + "/bin/"
+			 + (launcher.isUnix() ? "run.sh" : "run.bat");
+		
         ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add(launcher.isUnix() ? "run.sh" : "run.bat");
+        args.add(startCommand);
         args.add("-c", server.getServerName());
         if(!launcher.isUnix()) {
             args = new ArgumentListBuilder().add("cmd.exe","/C").addQuoted(args.toStringWithQuote());
@@ -78,8 +81,12 @@ public class CommandsUtils {
      * @return true if everything gone fine, false if any error occurred 
      */
     public static boolean stop(ServerBean server, Launcher launcher, BuildListener listener) {
-        ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add(launcher.isUnix() ? "shutdown.sh" : "shutdown.bat");
+
+		String stopCommand = server.getHomeDir() + "/bin/"
+				+ (launcher.isUnix() ? "shutdown.sh" : "shutdown.bat");
+
+		ArgumentListBuilder args = new ArgumentListBuilder();
+        args.add(stopCommand);
         
         String jndiUrl = "jnp://127.0.0.1:" + server.getJndiPort(); //jnp://127.0.0.1:1099
         
