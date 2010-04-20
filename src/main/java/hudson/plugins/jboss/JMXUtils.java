@@ -247,8 +247,6 @@ public class JMXUtils {
 					String.format("jboss.j2ee:service=EARDeployment,url='%s'", earName));
 			return ServiceMBean.STARTED == (Integer) server.getAttribute(serverMBeanName, "State");
 		} catch (Exception e) {
-			e.printStackTrace();
-			listener.fatalError(e.getMessage());
 			return false;
 		}
 	}
@@ -271,8 +269,6 @@ public class JMXUtils {
 					String.format("jboss.j2ee:service=EjbModule,module=%s", ejbName));
 			return ServiceMBean.STARTED == (Integer) server.getAttribute(serverMBeanName, "State");
 		} catch (Exception e) {
-			e.printStackTrace();
-			listener.fatalError(e.getMessage());
 			return false;
 		}
 	}
