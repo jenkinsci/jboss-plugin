@@ -3,6 +3,7 @@ package hudson.plugins.jboss;
 import hudson.model.BuildListener;
 
 import java.util.Properties;
+import java.util.Set;
 
 import javax.management.MBeanServerConnection;
 import javax.management.ObjectName;
@@ -183,6 +184,12 @@ public class JMXUtils {
 						String.format("Verifying deployment of the EJB '%s' ... %s",
 								moduleName, ok?"SUCCESS":"FAILED"));
 				deployed &= ok;
+			} else if (moduleName.endsWith(".war")) {
+				boolean ok = checkWARDeploymentState(listener, server, moduleName);
+				listener.getLogger().println(
+						String.format("Verifying deployment of the WAR '%s' ... %s",
+								moduleName, ok?"SUCCESS":"FAILED"));
+				deployed &= ok;
 			} else {
 				listener.error(
 						String.format("Unknown type of the module '%s'. Cannot verify deployment.", moduleName));
@@ -193,6 +200,33 @@ public class JMXUtils {
 		listener.getLogger().println("Verification finished.");
 
 		return deployed;
+	}
+
+	/**
+	 * Checks if single WAR is deployed with no problems.
+	 * To check other states take a look on {@link ServiceMBean}.
+	 * 
+	 * @param listener for logging purpose
+     * @param server given {@link MBeanServerConnection}
+     * @param warName the name of the WAR to be checked
+     * 
+	 * @return true if started, false otherwise 
+	 */
+	public static boolean checkWARDeploymentState(
+			final BuildListener listener,
+			MBeanServerConnection server, String warName) {
+		try {
+			String objectPattern = String.format("jboss.web.deployment:*,war=%s", warName);
+			@SuppressWarnings("unchecked")
+			Set<ObjectName> set = server.queryNames(new ObjectName(objectPattern), null);
+			if (set == null || set.size() == 0) {
+				return false; // no instance
+			}
+			ObjectName serverMBeanName = set.iterator().next(); // only first
+			return ServiceMBean.STARTED == (Integer) server.getAttribute(serverMBeanName, "State");
+		} catch (Exception e) {
+			return false;
+		}
 	}
 
 	/**
