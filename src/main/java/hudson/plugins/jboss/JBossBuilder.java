@@ -118,7 +118,7 @@ public class JBossBuilder extends Builder {
 	    				String[] modules = Util.tokenize(operation.getProperties());
 	    				result = JMXUtils.checkDeploy(hostName, server.getJndiPort(), listener, 3, modules);
 	    			} else {
-	    				listener.getLogger().println("Mo modules provided.");
+	    				listener.getLogger().println("No modules provided.");
 	    				result = true;
 	    			}
 	    			if (!result && operation.isStopOnFailure()) {
