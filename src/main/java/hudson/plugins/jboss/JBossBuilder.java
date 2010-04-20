@@ -30,7 +30,7 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 public class JBossBuilder extends Builder {
 
-    private final ServerBean server;
+    private final String serverName;
     private final Operation operation;
     
     /**
@@ -42,21 +42,11 @@ public class JBossBuilder extends Builder {
     @DataBoundConstructor
     public JBossBuilder(Operation operation, String serverName) {
     	this.operation = operation;
-    	
-    	ServerBean localServerBean = null;
-    	
-    	for (ServerBean bean : getDescriptor().getServers()) {
-    		if (bean.getServerName().equals(serverName)){
-    			localServerBean = bean;
-    			break;
-    		}
-    	}
-    	
-    	this.server = localServerBean;
+    	this.serverName = serverName;
     }
 
-    public ServerBean getServer() {
-        return this.server;
+    public String getServerName() {
+        return this.serverName;
     }
 
     public Operation getOperation() {
@@ -67,6 +57,8 @@ public class JBossBuilder extends Builder {
 	public boolean perform(AbstractBuild build, Launcher launcher,
 			BuildListener listener) throws IOException, InterruptedException {    	
     	
+		ServerBean server = getDescriptor().findServer(serverName);
+		
     	if (server == null || operation == null) {
     		listener.fatalError("Wrong configuration of the plugin. Step error.");
     		return false;
@@ -307,6 +299,16 @@ public class JBossBuilder extends Builder {
         public OperationEnum[] getOperations() {
         	return OperationEnum.all;
         }
+        
+        protected ServerBean findServer(String serverProfileName) {
+        	for (ServerBean server : this.servers) {
+        		if (serverProfileName.equals(server.getServerName())) {
+        			return server;
+        		}
+        	}
+        	return null;
+        }
+        
     }
     
     public static class ServerBean {

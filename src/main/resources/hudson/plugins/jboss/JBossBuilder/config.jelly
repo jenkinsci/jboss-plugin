@@ -10,7 +10,7 @@
 	  <f:entry title="Server">
 		<select class="setting-input" name="jBossBuilder.serverName">
 	        <j:forEach var="serv" items="${descriptor.servers}">
-	          <f:option selected="${serv.serverName==instance.server.serverName}" value="${serv.serverName}">${serv.serverName}</f:option>
+	          <f:option selected="${serv.serverName==instance.serverName}" value="${serv.serverName}">${serv.serverName}</f:option>
 	        </j:forEach>
 		</select>
 	  </f:entry>
