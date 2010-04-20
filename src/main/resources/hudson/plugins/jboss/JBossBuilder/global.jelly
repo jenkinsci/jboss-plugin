@@ -38,6 +38,10 @@
 		          		field="jndiPort" value="${server.jndiPort}" default="1099" />
 		        </f:entry>
 
+		        <f:entry title="Timeout (min)" field="timeout">
+		          <f:textbox
+		          		field="timeout" value="${server.timeout}" default="15" />
+		        </f:entry>
 
 		        <f:entry>
 		          <div align="right">

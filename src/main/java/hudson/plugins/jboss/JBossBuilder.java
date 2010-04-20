@@ -68,7 +68,7 @@ public class JBossBuilder extends Builder {
 			BuildListener listener) throws IOException, InterruptedException {    	
     	
     	if (server == null || operation == null) {
-    		listener.fatalError("Wrong configuration of plugin. Step error.");
+    		listener.fatalError("Wrong configuration of the plugin. Step error.");
     		return false;
     	}
 
@@ -83,14 +83,17 @@ public class JBossBuilder extends Builder {
 	    				listener.getLogger().println("JBoss AS already started.");
 	    				return true;
 	    			}
+	    			listener.getLogger().println("Going to start server with timeout " + server.getTimeout()*60 + " seconds...");
 	    			boolean ret = CommandsUtils.start(server,
 						operation.getProperties(), build, launcher, listener)
 						&& JMXUtils.checkServerStatus(hostName, server.getJndiPort(),
-								listener, 15, false);
+								listener, server.getTimeout()*60, false);
 	    			if (ret) {
 	        			listener.getLogger().println("JBoss AS started!");
 	    			} else {
-	        			listener.getLogger().println("JBoss AS is not stared before timeout has expired!");
+	        			listener.getLogger().println(
+	        					String.format("JBoss AS is not stared before timeout (%d min) has expired!",
+	        								server.getTimeout()));
 	    			}
 	    			return ret;
 	    			
@@ -217,7 +220,7 @@ public class JBossBuilder extends Builder {
             try {
             	jndiPortNr = Integer.parseInt(value);
             } catch (NumberFormatException e) {
-            	return FormValidation.error("JNDI port is valid number.");
+            	return FormValidation.error("JNDI port is not valid number.");
             }
             
             if (jndiPortNr <= 1024) {
@@ -226,7 +229,29 @@ public class JBossBuilder extends Builder {
             
             return FormValidation.ok();
         }
-		
+
+        public FormValidation doCheckTimeout(
+        		@QueryParameter final String value)
+        			throws IOException, ServletException {
+
+            if(value == null || value.length() == 0) { 
+                return FormValidation.error("Timeout is mandatory.");
+            }
+            
+            int timeout = 0;
+            try {
+            	timeout = Integer.parseInt(value);
+            } catch (NumberFormatException e) {
+            	return FormValidation.error("Timeout is not valid number.");
+            }
+            
+            if (timeout < 5) {
+            	return FormValidation.warning("Timeout is very low, are you sure JBoss will start in this time?");
+            }
+            
+            return FormValidation.ok();
+        }
+
         @Override
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             return true;
@@ -251,7 +276,8 @@ public class JBossBuilder extends Builder {
             	servers.add(new ServerBean(
             							homeDir,
             							optServersObject.getString("serverName"),
-            							optServersObject.getInt("jndiPort")));
+            							optServersObject.getInt("jndiPort"),
+            							optServersObject.getInt("timeout")));
             } else {
             	JSONArray optServersArray = parameters.optJSONArray("servers");
             	if (optServersArray != null) {
@@ -260,7 +286,8 @@ public class JBossBuilder extends Builder {
                     	servers.add(new ServerBean(
                     			homeDir,
     							serverObject.getString("serverName"),
-    							serverObject.getInt("jndiPort")));
+    							serverObject.getInt("jndiPort"),
+    							serverObject.getInt("timeout")));
             		}
             	}
             }
@@ -286,12 +313,15 @@ public class JBossBuilder extends Builder {
     	private final String homeDir;
     	private final String serverName;
     	private final int jndiPort;
+    	private final int timeout;
     	
 		public ServerBean(final String homeDir,
-				final String serverName, final int jndiPort) {
+						final String serverName,
+						final int jndiPort, final int timeout) {
     		this.homeDir = homeDir;
     		this.serverName = serverName;
     		this.jndiPort =jndiPort;
+    		this.timeout = timeout;
     	}
     	
 		public String getHomeDir() {
@@ -306,13 +336,19 @@ public class JBossBuilder extends Builder {
     		return this.jndiPort;
     	}
     	
+    	public int getTimeout() {
+    		return this.timeout;
+    	}
+    	
     	@Override
     	public String toString() {
     		return new StringBuilder()
     				.append("ServerBean=")
     				.append(serverName)
     				.append(":")
-    				.append(jndiPort).toString();
+    				.append(jndiPort)
+    				.append(" timeout=")
+    				.append(timeout).toString();
     	}
     }
 }
