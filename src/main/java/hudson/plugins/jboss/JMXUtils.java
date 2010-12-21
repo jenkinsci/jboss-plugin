@@ -65,10 +65,11 @@ public class JMXUtils {
     	
 		MBeanServerConnection server = null;
 		NamingException ne = null;
-		int retryWait = 1000;
-		for (int i = 0; i < timeout; ++i) {
+		
+		long startTime = System.currentTimeMillis();
+		while (System.currentTimeMillis() - startTime < timeout * 1000) {
 			try {
-				Thread.sleep(retryWait);
+				Thread.sleep(100);
 				server = (MBeanServerConnection) ctx
 						.lookup("jmx/invoker/RMIAdaptor");
 				break;
@@ -83,6 +84,26 @@ public class JMXUtils {
 		}
 
 		if (server == null) {
+			
+			Throwable exceptionTCause = null;
+			Throwable tempException = ne.getCause();
+			do{
+				exceptionTCause = tempException;
+				tempException = tempException.getCause();
+				
+				if (exceptionTCause instanceof java.rmi.ConnectException) {//server started without right parameters
+					throw new RuntimeException(new StringBuilder().append(
+							"Unable to get JBoss JMX MBean connection (perhaps the server is running with the wrong parameters) ")
+							.append("in ").append(timeout).append(" seconds.").toString(), ne);
+				}
+				else{
+					if(exceptionTCause instanceof javax.naming.ServiceUnavailableException){//server is shutdown
+						return server;
+					}
+				}
+			}
+			while (tempException != null);
+			
 			throw new RuntimeException(new StringBuilder().append(
 					"Unable to get JBoss JMX MBean connection ").append("in ")
 					.append(timeout).append(" seconds.").toString(), ne);
@@ -127,8 +148,10 @@ public class JMXUtils {
 		boolean started = false;
 		try {
 			InitialContext ctx = getInitialContext(hostName, jndiPort);
-	
 			MBeanServerConnection server = getMBeanServer(ctx, listener, timeout);
+			
+			//case when server is shutdown
+			if(server == null) return false;
 			
 			// Wait until server startup is complete
 			long startTime = System.currentTimeMillis();
@@ -178,7 +201,7 @@ public class JMXUtils {
 						String.format("Verifying deployment of the EAR '%s' ... %s",
 								moduleName, ok?"SUCCESS":"FAILED"));
 				deployed &= ok;
-			} else if (moduleName.endsWith("-ejb.jar")) {
+			} else if (moduleName.endsWith(".jar")) {
 				boolean ok = checkEJBDeploymentState(listener, server, moduleName);
 				listener.getLogger().println(
 						String.format("Verifying deployment of the EJB '%s' ... %s",

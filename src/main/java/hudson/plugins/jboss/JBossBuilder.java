@@ -37,7 +37,6 @@ public class JBossBuilder extends Builder {
      * Currently hard-coded localhost address.
      * In future it can be more flexible.
      */
-    private final String hostName = "127.0.0.1";
     
     @DataBoundConstructor
     public JBossBuilder(Operation operation, String serverName) {
@@ -71,50 +70,61 @@ public class JBossBuilder extends Builder {
 	    	switch (operation.getType()) {
 	    	
 	    		case START_AND_WAIT:
-	    			if (JMXUtils.checkServerStatus(hostName, server.getJndiPort(), listener, 3, true)) {
-	    				listener.getLogger().println("JBoss AS already started.");
+		    		listener.getLogger().println("START_AND_WAIT: Checking if server is already running (max 20 seconds)...");
+	    			if (JMXUtils.checkServerStatus(server.getAddress(), server.getJndiPort(), listener, 20, false)) {
+	    				listener.getLogger().println("START_AND_WAIT: JBoss AS already started.");
 	    				return true;
 	    			}
-	    			listener.getLogger().println("Going to start server with timeout " + server.getTimeout()*60 + " seconds...");
+	    			listener.getLogger().println("START_AND_WAIT: Going to start server with timeout " + server.getTimeout() + " seconds...");
+	    			long startJbossServerTime;
+	    			startJbossServerTime = System.currentTimeMillis();
 	    			boolean ret = CommandsUtils.start(server,
 						operation.getProperties(), build, launcher, listener)
-						&& JMXUtils.checkServerStatus(hostName, server.getJndiPort(),
-								listener, server.getTimeout()*60, false);
+						&& JMXUtils.checkServerStatus(server.getAddress(), server.getJndiPort(),
+								listener, server.getTimeout(), false);
+	    			startJbossServerTime = System.currentTimeMillis() - startJbossServerTime;
 	    			if (ret) {
-	        			listener.getLogger().println("JBoss AS started!");
+	        			listener.getLogger().println("START_AND_WAIT: JBoss AS started for " + startJbossServerTime/1000.0 + " sec !");
 	    			} else {
 	        			listener.getLogger().println(
-	        					String.format("JBoss AS is not stared before timeout (%d min) has expired!",
+	        					String.format("START_AND_WAIT: JBoss AS is not started before timeout (%d sec) has expired!",
 	        								server.getTimeout()));
 	    			}
 	    			return ret;
 	    			
 	    		case START:
-					if (JMXUtils.checkServerStatus(hostName, server.getJndiPort(), listener, 3, true)) {
-		    				listener.getLogger().println("JBoss AS already started.");
-		    				return true;
+		    		listener.getLogger().println("START: Checking if server is already running (max 20 seconds)...");
+				if (JMXUtils.checkServerStatus(server.getAddress(), server.getJndiPort(), listener, 20, false)) {
+		    			listener.getLogger().println("START: JBoss AS already started.");
+		    			return true;
 		    		}
+	    			listener.getLogger().println("START: Going to trigger start server...");
 	    			return CommandsUtils.start(server, operation.getProperties(), build, launcher, listener);
 
 	    		case SHUTDOWN:
-	    			if (!JMXUtils.checkServerStatus(hostName, server.getJndiPort(), listener, 3, true)) {
-	    				listener.getLogger().println("JBoss AS is not working.");
+		    		listener.getLogger().println("SHUTDOWN: Checking if server is running (max 20 seconds)...");
+	    			if (!JMXUtils.checkServerStatus(server.getAddress(), server.getJndiPort(), listener, 20, false)) {
+	    				listener.getLogger().println("SHUTDOWN: JBoss AS is not working.");
 	    				return true;
 	    			}
 	    			return CommandsUtils.stop(server, launcher, listener);
 
 	    		case CHECK_DEPLOY:
-	    			JMXUtils.checkServerStatus(hostName, server.getJndiPort(), listener, 3, false);
+		    		listener.getLogger().println("CHECK_DEPLOY: Checking if server is running (max 20 seconds)...");
+	    			if(!JMXUtils.checkServerStatus(server.getAddress(), server.getJndiPort(), listener, 20, false)){
+	    				listener.getLogger().println("CHECK_DEPLOY: JBoss AS is not working.");
+	    				return false;
+	    			}
 	    			boolean result = false;
 	    			if (Util.fixEmpty(operation.getProperties()) != null) {
 	    				String[] modules = Util.tokenize(operation.getProperties());
-	    				result = JMXUtils.checkDeploy(hostName, server.getJndiPort(), listener, 3, modules);
+	    				result = JMXUtils.checkDeploy(server.getAddress(), server.getJndiPort(), listener, 20, modules);
 	    			} else {
-	    				listener.getLogger().println("No modules provided.");
+	    				listener.getLogger().println("CHECK_DEPLOY: No modules provided.");
 	    				result = true;
 	    			}
 	    			if (!result && operation.isStopOnFailure()) {
-	    				listener.getLogger().println("StopOnFailure flag is set, going to down server...");
+	    				listener.getLogger().println("CHECK_DEPLOY: StopOnFailure flag is set, going to down server...");
 	    				CommandsUtils.stop(server, launcher, listener);
 	    			}
 	    			return result;
@@ -137,12 +147,6 @@ public class JBossBuilder extends Builder {
       */
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
-
-    	/**
-         * Home directory of JBoss.
-         */
-        private String homeDir;
-
         /**
          * List of defined servers.
          */
@@ -162,14 +166,14 @@ public class JBossBuilder extends Builder {
          *      Indicates the outcome of the validation. This is sent to the browser.
          */
 		public FormValidation doCheckHomeDir(
-				@QueryParameter final String jbossHomeString)
+				@QueryParameter final String value)
 					throws IOException,	ServletException {
         	
-            if(jbossHomeString == null || jbossHomeString.length() == 0) { 
+            if(value == null || value.length() == 0) { 
                 return FormValidation.error("Please set path to JBoss home.");
             }
         
-            File jbossHomeFile = new File(jbossHomeString);
+            File jbossHomeFile = new File(value);
             
             if (!jbossHomeFile.exists()) {
             	return FormValidation.error("Path doesn't exist.");
@@ -188,7 +192,37 @@ public class JBossBuilder extends Builder {
             
             return FormValidation.ok();
         }
-
+    
+		public FormValidation doCheckAddress(
+				@QueryParameter final String value)
+					throws IOException,	ServletException {
+        	
+            if(value == null || value.length() == 0) { 
+                return FormValidation.error("Please set IP address of JBoss server.");
+            }
+            return FormValidation.ok();
+        }
+            
+		public FormValidation doCheckCmdToStart(
+				@QueryParameter final String value)
+					throws IOException,	ServletException {
+        	
+            if(value == null || value.length() == 0) { 
+                return FormValidation.error("Please set the command to start JBoss server.");
+            }
+            return FormValidation.ok();
+        }
+            
+		public FormValidation doCheckCmdToShutdown(
+				@QueryParameter final String value)
+					throws IOException,	ServletException {
+        	
+            if(value == null || value.length() == 0) { 
+                return FormValidation.error("Please set the command to shutdown JBoss server.");
+            }
+            return FormValidation.ok();
+        }
+            
         public FormValidation doCheckServerName(
         		@QueryParameter final String value)
         			throws IOException, ServletException {
@@ -258,38 +292,59 @@ public class JBossBuilder extends Builder {
 
         @Override
         public boolean configure(StaplerRequest req, JSONObject parameters) throws FormException {
-
-        	homeDir = parameters.getString("homeDir");
-
+        	
         	servers.clear();
         	
             JSONObject optServersObject = parameters.optJSONObject("servers");
             if (optServersObject != null) {
-            	servers.add(new ServerBean(
-            							homeDir,
-            							optServersObject.getString("serverName"),
-            							optServersObject.getInt("jndiPort"),
-            							optServersObject.getInt("timeout")));
+            	JSONObject serverObject = (JSONObject) (optServersObject.optJSONObject("CurrentServer"));
+            	if(serverObject.getString("value").equals("option_1") == true){//remote case
+            		servers.add(new ServerBean(
+            			serverObject.getString("cmdToStart"),
+            			serverObject.getString("cmdToShutdown"),
+            			serverObject.getString("address"),
+            			serverObject.getString("serverName"),
+            			serverObject.getInt("jndiPort"),
+            			serverObject.getInt("timeout"),
+            			1));
+            	}
+            	else{//local case
+            		servers.add(new ServerBean(
+                			serverObject.getString("serverName"),
+                			serverObject.getString("homeDir"),
+                			serverObject.getInt("jndiPort"),
+                			serverObject.getInt("timeout"),
+                			0));
+            	}
             } else {
             	JSONArray optServersArray = parameters.optJSONArray("servers");
             	if (optServersArray != null) {
             		for (int i=0; i < optServersArray.size(); i++) {
-            			JSONObject serverObject = (JSONObject) optServersArray.get(i);
-                    	servers.add(new ServerBean(
-                    			homeDir,
+            			JSONObject serverObject = (JSONObject) ((JSONObject)optServersArray.get(i)).optJSONObject("CurrentServer");
+            			if(serverObject.getString("value").equals("option_1") == true){//remote case
+            				servers.add(new ServerBean(
+        						serverObject.getString("cmdToStart"),
+                    			serverObject.getString("cmdToShutdown"),
+                    			serverObject.getString("address"),
     							serverObject.getString("serverName"),
     							serverObject.getInt("jndiPort"),
-    							serverObject.getInt("timeout")));
+    							serverObject.getInt("timeout"),
+    							1));
+            			}
+            			else{//local case
+            				servers.add(new ServerBean(
+                        			serverObject.getString("serverName"),
+                        			serverObject.getString("homeDir"),
+                        			serverObject.getInt("jndiPort"),
+                        			serverObject.getInt("timeout"),
+                        			0));
+            			}
             		}
             	}
             }
             
             save();
             return super.configure(req, parameters);
-        }
-
-        public String getHomeDir() {
-            return homeDir;
         }
         
         public List<ServerBean> getServers() {
@@ -312,26 +367,81 @@ public class JBossBuilder extends Builder {
     }
     
     public static class ServerBean {
-    	private final String homeDir;
+    	private final String cmdToStart;
+		private final String cmdToShutdown;
+    	private final String address;
     	private final String serverName;
+    	private final String homeDir;
     	private final int jndiPort;
     	private final int timeout;
+    	private final int kind;
     	
-		public ServerBean(final String homeDir,
+    	/**
+    	 * Constructor for ServerBean in remote case
+    	 * @param cmdToStart
+    	 * @param cmdToShutdown
+    	 * @param address
+    	 * @param serverName
+    	 * @param jndiPort
+    	 * @param timeout
+    	 * @param kind
+    	 */
+		public ServerBean(final String cmdToStart,
+						final String cmdToShutdown,
+						final String address,
 						final String serverName,
-						final int jndiPort, final int timeout) {
-    		this.homeDir = homeDir;
+						final int jndiPort, final int timeout, final int kind) {
+    		this.cmdToStart = cmdToStart;
+    		this.cmdToShutdown = cmdToShutdown;
+    		this.address = address;
     		this.serverName = serverName;
     		this.jndiPort =jndiPort;
     		this.timeout = timeout;
+    		this.kind = kind;
+    		//empty initialization
+    		this.homeDir = "";
     	}
-    	
-		public String getHomeDir() {
-			return this.homeDir;
+		
+		/**
+		 * Constructor for ServerBean in local case
+		 * @param serverName
+		 * @param homeDir
+		 * @param jndiPort
+		 * @param timeout
+		 * @param kind
+		 */
+		public ServerBean(final String serverName,
+						final String homeDir,
+						final int jndiPort, final int timeout, final int kind) {
+			this.serverName = serverName;
+			this.homeDir = homeDir;
+			this.jndiPort =jndiPort;
+			this.timeout = timeout;
+			this.kind = kind;
+			//empty initialization
+			this.address = "127.0.0.1";
+			this.cmdToStart = "";
+			this.cmdToShutdown = "";
 		}
 		
+    	public String getCmdToStart() {
+			return cmdToStart;
+		}
+
+		public String getCmdToShutdown() {
+			return cmdToShutdown;
+		}
+
+		public String getAddress() {
+			return address;
+		}
+
     	public String getServerName() {
     		return this.serverName;
+    	}
+    	
+    	public String getHomeDir() {
+    		return this.homeDir;
     	}
     	
     	public int getJndiPort() {
@@ -342,15 +452,21 @@ public class JBossBuilder extends Builder {
     		return this.timeout;
     	}
     	
+    	public int getKind() {
+			return kind;
+		}
+    	
     	@Override
     	public String toString() {
     		return new StringBuilder()
     				.append("ServerBean=")
-    				.append(serverName)
+    				.append(address)
     				.append(":")
     				.append(jndiPort)
     				.append(" timeout=")
-    				.append(timeout).toString();
+    				.append(timeout)
+    				.append(" kind=")
+    				.append(kind).toString();
     	}
     }
 }

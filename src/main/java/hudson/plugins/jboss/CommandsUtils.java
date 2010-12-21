@@ -40,14 +40,25 @@ public class CommandsUtils {
 			AbstractBuild build, Launcher launcher,
 			BuildListener listener) throws IOException, InterruptedException {
 		
-		String startCommand = server.getHomeDir() + "/bin/"
+		int kindOfServer = server.getKind();
+		String startCommand;
+		
+		if(kindOfServer == 1){//remote case
+			startCommand = server.getCmdToStart();
+		}
+		else{//local case
+			startCommand = server.getHomeDir() + "/bin/"
 			 + (launcher.isUnix() ? "run.sh" : "run.bat");
+		}
 		
         ArgumentListBuilder args = new ArgumentListBuilder();
         args.add(startCommand);
-        args.add("-c", server.getServerName());
+        
+        if(kindOfServer == 0)//local case
+        	args.add("-c", server.getServerName());
+        
         if(!launcher.isUnix()) {
-            args = new ArgumentListBuilder().add("cmd.exe","/C").addQuoted(args.toStringWithQuote());
+            args = new ArgumentListBuilder().add("cmd.exe","/C").add(args.toStringWithQuote());
         }
 
     	EnvVars env = build.getEnvironment(listener);
@@ -56,13 +67,24 @@ public class CommandsUtils {
         args.addKeyValuePairsFromPropertyString("-D",properties,vr);
 
         try {
-        	launcher.launch()
+        	if(kindOfServer == 1){//remote case
+	        	launcher.launch()
         				.stderr(listener.getLogger())
         				.stdout(new NullOutputStream())
         				.cmds(args)
-        				.pwd(server.getHomeDir() + "/bin")
         				.start();
-            return true;
+	        	return true;
+        	}
+        	else{//local case
+        		launcher.launch()
+						.stderr(listener.getLogger())
+						.stdout(new NullOutputStream())
+						.cmds(args)
+		   				.pwd(server.getHomeDir() + "/bin")
+						.start();
+        		return true;
+        	}
+           
         } catch (Exception e) {
         	if (e instanceof IOException) {
         		Util.displayIOException((IOException)e,listener);
@@ -82,27 +104,47 @@ public class CommandsUtils {
      */
     public static boolean stop(ServerBean server, Launcher launcher, BuildListener listener) {
 
-		String stopCommand = server.getHomeDir() + "/bin/"
-				+ (launcher.isUnix() ? "shutdown.sh" : "shutdown.bat");
-
+    	int kindOfServer = server.getKind();
+    	String stopCommand;    
+    	
+    	if(kindOfServer == 1){//remote case
+    		stopCommand = server.getCmdToShutdown();
+    	}
+    	else{//local case
+    		stopCommand = server.getHomeDir() + "/bin/"
+			+ (launcher.isUnix() ? "shutdown.sh" : "shutdown.bat");
+    	}
+		
 		ArgumentListBuilder args = new ArgumentListBuilder();
         args.add(stopCommand);
         
-        String jndiUrl = "jnp://127.0.0.1:" + server.getJndiPort(); //jnp://127.0.0.1:1099
+        if(kindOfServer == 0){//local case
+	        String jndiUrl = "jnp://"+server.getAddress()+":" + server.getJndiPort(); //jnp://127.0.0.1:1099
+	        args.add("-s", jndiUrl, "-S");
+        }
         
-        args.add("-s", jndiUrl, "-S");
         if(!launcher.isUnix()) {
-            args = new ArgumentListBuilder().add("cmd.exe","/C").addQuoted(args.toStringWithQuote());
+            args = new ArgumentListBuilder().add("cmd.exe","/C").add(args.toStringWithQuote());
         }
         
         try {
-        	launcher.launch()
-        				.stderr(listener.getLogger())
-        				.stdout(new NullOutputStream())
-        				.cmds(args)
-        				.pwd(server.getHomeDir() + "/bin")
-        				.join();
-            return true;
+        	if(kindOfServer == 1){//remote case
+	        	launcher.launch()
+	    				.stderr(listener.getLogger())
+	    				.stdout(new NullOutputStream())
+	    				.cmds(args)
+	    				.join();
+	            return true;
+        	}
+        	else{
+        		launcher.launch()
+						.stderr(listener.getLogger())
+						.stdout(new NullOutputStream())
+						.cmds(args)
+		       			.pwd(server.getHomeDir() + "/bin")
+						.join();
+        		return true;
+        	}
         } catch (Exception e) {
         	if (e instanceof IOException) {
         		Util.displayIOException((IOException)e,listener);
