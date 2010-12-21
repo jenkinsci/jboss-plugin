@@ -11,7 +11,7 @@
 
 	<groupId>hudson.plugins</groupId>
 	<artifactId>jboss</artifactId>
-	<version>1.0.4</version>
+	<version>1.0.3-SNAPSHOT</version>
 	<packaging>hpi</packaging>
 	
 	<url>http://wiki.hudson-ci.org/display/HUDSON/JBoss+Management+Plugin</url>
