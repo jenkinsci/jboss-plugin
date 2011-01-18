@@ -58,7 +58,7 @@ public class CommandsUtils {
         	args.add("-c", server.getServerName());
         
         if(!launcher.isUnix()) {
-            args = new ArgumentListBuilder().add("cmd.exe","/C").add(args.toStringWithQuote());
+            args = args.toWindowsCommand();
         }
 
     	EnvVars env = build.getEnvironment(listener);
@@ -124,7 +124,7 @@ public class CommandsUtils {
         }
         
         if(!launcher.isUnix()) {
-            args = new ArgumentListBuilder().add("cmd.exe","/C").add(args.toStringWithQuote());
+            args = args.toWindowsCommand();
         }
         
         try {
