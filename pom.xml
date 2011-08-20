@@ -3,18 +3,16 @@
 	<modelVersion>4.0.0</modelVersion>
 	
 	<parent>
-		<groupId>org.jvnet.hudson.plugins</groupId>
+		<groupId>org.jenkins-ci.plugins</groupId>
 		<artifactId>plugin</artifactId>
-		<version>1.386</version>
-		<relativePath>../pom.xml</relativePath>
+		<version>1.398</version>
 	</parent>
 
-	<groupId>hudson.plugins</groupId>
 	<artifactId>jboss</artifactId>
 	<version>1.0.4-SNAPSHOT</version>
 	<packaging>hpi</packaging>
 	
-	<url>http://wiki.hudson-ci.org/display/HUDSON/JBoss+Management+Plugin</url>
+	<url>http://wiki.jenkins-ci.org/display/JENKINS/JBoss+Management+Plugin</url>
 
 	<developers>
 		<developer>
@@ -73,4 +71,10 @@
 			<url>http://maven.glassfish.org/content/groups/public/</url>
 		</pluginRepository>
 	</pluginRepositories>
+
+	<scm>
+		<connection>scm:git:git://github.com/jenkinsci/jboss-plugin.git</connection>
+		<developerConnection>scm:git:git@github.com:jenkinsci/jboss-plugin.git</developerConnection>
+		<url>https://github.com/jenkinsci/jboss-plugin</url>
+	</scm>
 </project>

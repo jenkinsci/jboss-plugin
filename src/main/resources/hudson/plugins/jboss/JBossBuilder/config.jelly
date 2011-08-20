@@ -2,7 +2,7 @@
 
   <j:if test="${empty(descriptor.servers)}">
 	  <f:entry title="">
-  			<div class="error">This plugin need to be configured in Manage Hudson -> Configure System.</div>
+  			<div class="error">This plugin needs to be configured in Manage Jenkins / Configure System.</div>
   		</f:entry>
   </j:if>
 
