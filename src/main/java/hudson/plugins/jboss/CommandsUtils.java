@@ -56,6 +56,8 @@ public class CommandsUtils {
         
         if(kindOfServer == 0)//local case
         	args.add("-c", server.getServerName());
+		if(kindOfServer == 0)//local case
+        	args.add("-b", server.getAddress());	
         
         if(!launcher.isUnix()) {
             args = args.toWindowsCommand();

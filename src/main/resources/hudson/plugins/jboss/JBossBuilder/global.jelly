@@ -82,7 +82,11 @@
 						<f:entry title="Timeout (sec)" field="timeout">
 							<f:textbox
 									field="timeout" value="${server.timeout}" default="15" />
-						</f:entry>      
+						</f:entry>
+						<f:entry title="Server IP Bind address" field="address">
+							<f:textbox
+									field="address" value="${server.address}" default="127.0.0.1" />
+						</f:entry>						
 				  </f:radioBlock>
 			
 					</f:block>
