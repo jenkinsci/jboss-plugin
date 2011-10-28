@@ -313,6 +313,7 @@ public class JBossBuilder extends Builder {
                 			serverObject.getString("serverName"),
                 			serverObject.getString("homeDir"),
                 			serverObject.getInt("jndiPort"),
+							serverObject.getString("address"),
                 			serverObject.getInt("timeout"),
                 			0));
             	}
@@ -336,6 +337,7 @@ public class JBossBuilder extends Builder {
                         			serverObject.getString("serverName"),
                         			serverObject.getString("homeDir"),
                         			serverObject.getInt("jndiPort"),
+									serverObject.getString("address"),
                         			serverObject.getInt("timeout"),
                         			0));
             			}
@@ -407,19 +409,24 @@ public class JBossBuilder extends Builder {
 		 * @param serverName
 		 * @param homeDir
 		 * @param jndiPort
+		 * @param address
 		 * @param timeout
 		 * @param kind
 		 */
 		public ServerBean(final String serverName,
 						final String homeDir,
-						final int jndiPort, final int timeout, final int kind) {
+						final int jndiPort,final String address, final int timeout, final int kind) {
 			this.serverName = serverName;
 			this.homeDir = homeDir;
 			this.jndiPort =jndiPort;
 			this.timeout = timeout;
 			this.kind = kind;
+			if (address == null || address.length() == 0){
+				this.address = "127.0.0.1";
+			} else {
+				this.address = address;
+			}
 			//empty initialization
-			this.address = "127.0.0.1";
 			this.cmdToStart = "";
 			this.cmdToShutdown = "";
 		}
