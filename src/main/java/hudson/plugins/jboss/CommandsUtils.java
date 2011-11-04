@@ -54,10 +54,10 @@ public class CommandsUtils {
         ArgumentListBuilder args = new ArgumentListBuilder();
         args.add(startCommand);
         
-        if(kindOfServer == 0)//local case
+        if(kindOfServer == 0){ //local case
         	args.add("-c", server.getServerName());
-		if(kindOfServer == 0)//local case
-        	args.add("-b", server.getAddress());	
+        	args.add("-b", server.getAddress());
+        }
         
         if(!launcher.isUnix()) {
             args = args.toWindowsCommand();
